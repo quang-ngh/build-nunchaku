@@ -6,7 +6,7 @@ import torch
 from diffusers.loaders import FluxLoraLoaderMixin
 from safetensors.torch import save_file
 
-from .utils import load_state_dict_in_safetensors
+from utils import load_state_dict_in_safetensors
 
 
 def to_diffusers(input_lora, output_path):

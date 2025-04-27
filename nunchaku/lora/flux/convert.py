@@ -1,8 +1,8 @@
 import argparse
 import os
 
-from .nunchaku_converter import to_nunchaku
-from .utils import is_nunchaku_format
+from nunchaku_converter import to_nunchaku
+from utils import is_nunchaku_format
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

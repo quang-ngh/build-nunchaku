@@ -5,16 +5,67 @@ import os
 
 import torch
 from safetensors.torch import save_file
+import safetensors
 from tqdm import tqdm
 
-from .diffusers_converter import to_diffusers
-from .packer import NunchakuWeightPacker
-from .utils import is_nunchaku_format, pad
-from ...utils import filter_state_dict, load_state_dict_in_safetensors
+from diffusers_converter import to_diffusers
+from packer import NunchakuWeightPacker
+from utils import is_nunchaku_format, pad
+# from ...utils import filter_state_dict, load_state_dict_in_safetensors
 
 logger = logging.getLogger(__name__)
 
 # region utilities
+
+from huggingface_hub import hf_hub_download
+
+
+def fetch_or_download(path, repo_type="model"):
+    if not os.path.exists(path):
+        hf_repo_id = os.path.dirname(path)
+        filename = os.path.basename(path)
+        path = hf_hub_download(repo_id=hf_repo_id, filename=filename, repo_type=repo_type)
+    return path
+
+def load_state_dict_in_safetensors(
+    path, device, filter_prefix=""
+) :
+    """Load state dict in SafeTensors.
+
+    Args:
+        path (`str`):
+            file path.
+        device (`str` | `torch.device`, optional, defaults to `"cpu"`):
+            device.
+        filter_prefix (`str`, optional, defaults to `""`):
+            filter prefix.
+
+    Returns:
+        `dict`:
+            loaded SafeTensors.
+    """
+    state_dict = {}
+    with safetensors.safe_open(fetch_or_download(path), framework="pt", device=device) as f:
+        for k in f.keys():
+            if filter_prefix and not k.startswith(filter_prefix):
+                continue
+            state_dict[k.removeprefix(filter_prefix)] = f.get_tensor(k)
+    return state_dict
+
+def filter_state_dict(state_dict, filter_prefix=""):
+    """Filter state dict.
+
+    Args:
+        state_dict (`dict`):
+            state dict.
+        filter_prefix (`str`):
+            filter prefix.
+
+    Returns:
+        `dict`:
+            filtered state dict.
+    """
+    return {k.removeprefix(filter_prefix): v for k, v in state_dict.items() if k.startswith(filter_prefix)}
 
 
 def update_state_dict(lhs, rhs, prefix=""):
@@ -442,10 +493,10 @@ def to_nunchaku(
         logger.debug("Already in nunchaku format, no conversion needed.")
         converted = tensors
     else:
-        extra_lora_dict = to_diffusers(tensors)
+        extra_lora_dict = to_diffusers(tensors, output_path=None)
 
         if isinstance(base_sd, str):
-            orig_state_dict = load_state_dict_in_safetensors(base_sd)
+            orig_state_dict = load_state_dict_in_safetensors(base_sd, device="cpu")
         else:
             orig_state_dict = base_sd
 

@@ -1,9 +1,57 @@
 import typing as tp
-
+import os 
 import torch
+import safetensors
 
-from ...utils import ceil_divide, load_state_dict_in_safetensors
+from huggingface_hub import hf_hub_download
 
+
+def fetch_or_download(path, repo_type="model"):
+    if not os.path.exists(path):
+        hf_repo_id = os.path.dirname(path)
+        filename = os.path.basename(path)
+        path = hf_hub_download(repo_id=hf_repo_id, filename=filename, repo_type=repo_type)
+    return path
+def ceil_divide(x, divisor):
+    """Ceiling division.
+
+    Args:
+        x (`int`):
+            dividend.
+        divisor (`int`):
+            divisor.
+
+    Returns:
+        `int`:
+            ceiling division result.
+    """
+    return (x + divisor - 1) // divisor
+
+
+def load_state_dict_in_safetensors(
+    path, device, filter_prefix=""
+) :
+    """Load state dict in SafeTensors.
+
+    Args:
+        path (`str`):
+            file path.
+        device (`str` | `torch.device`, optional, defaults to `"cpu"`):
+            device.
+        filter_prefix (`str`, optional, defaults to `""`):
+            filter prefix.
+
+    Returns:
+        `dict`:
+            loaded SafeTensors.
+    """
+    state_dict = {}
+    with safetensors.safe_open(fetch_or_download(path), framework="pt", device=device) as f:
+        for k in f.keys():
+            if filter_prefix and not k.startswith(filter_prefix):
+                continue
+            state_dict[k.removeprefix(filter_prefix)] = f.get_tensor(k)
+    return state_dict
 
 def is_nunchaku_format(lora):
     if isinstance(lora, str):

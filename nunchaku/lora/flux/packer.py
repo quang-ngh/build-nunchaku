@@ -1,9 +1,23 @@
 # Copy the packer from https://github.com/mit-han-lab/deepcompressor/
 import torch
 
-from .utils import pad
-from ...utils import ceil_divide
+from utils import pad
 
+
+def ceil_divide(x, divisor):
+    """Ceiling division.
+
+    Args:
+        x (`int`):
+            dividend.
+        divisor (`int`):
+            divisor.
+
+    Returns:
+        `int`:
+            ceiling division result.
+    """
+    return (x + divisor - 1) // divisor
 
 class MmaWeightPackerBase:
     def __init__(self, bits, warp_n, comp_n=None, comp_k=None):
